@@ -30,45 +30,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextBtn = carousel.querySelector('.next');
     if (!track) return;
 
+    // Arrows loop: at the last slide, "next" jumps back to the first (and the reverse)
     const scrollByOneSlide = (direction) => {
       const slide = track.querySelector('.carousel-slide');
       const slideWidth = slide ? slide.getBoundingClientRect().width + 16 : 300;
-      track.scrollBy({ left: direction * slideWidth, behavior: 'smooth' });
+      const atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 4;
+      const atStart = track.scrollLeft <= 4;
+      if (direction > 0 && atEnd) {
+        track.scrollTo({ left: 0, behavior: 'smooth' });
+      } else if (direction < 0 && atStart) {
+        track.scrollTo({ left: track.scrollWidth, behavior: 'smooth' });
+      } else {
+        track.scrollBy({ left: direction * slideWidth, behavior: 'smooth' });
+      }
     };
 
     if (prevBtn) prevBtn.addEventListener('click', () => scrollByOneSlide(-1));
     if (nextBtn) nextBtn.addEventListener('click', () => scrollByOneSlide(1));
   });
 
-  // Scroll reveal: pieces of the page fade and slide up as they enter the screen,
-  // and fade back out as they leave (at the top or bottom), so it replays in both directions.
-  // To animate another element, add its CSS selector to the list below.
+  // Used by the back-to-top button: skip smooth scrolling for people who prefer reduced motion
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if ('IntersectionObserver' in window && !reduceMotion) {
-    // Small pieces animate one by one (not whole cards), so you see motion all the way down the page.
-    const targets = Array.from(document.querySelectorAll(
-      '.about .section-title, .about-grid p, .work > .section-title, ' +
-      '.project-header, .project-desc, .stats, .tags, ' +
-      '.subproject > h4, .subproject > p, .subproject .carousel, .subproject .single-image, ' +
-      '.subproject .video-embed, .subproject > .btn, .artist-group h5, .audio-item, ' +
-      '.experience .section-title, .exp-card, .contact > *'
-    ));
 
-    // The "band" is the middle of the screen: a piece is visible while any part of it is inside.
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        entry.target.classList.toggle('is-visible', entry.isIntersecting);
-      });
-    }, { rootMargin: '-12% 0px -10% 0px' });
-
-    targets.forEach((el) => {
-      el.classList.add('reveal');
-      if (el.classList.contains('exp-card')) {
-        el.style.transitionDelay = (Array.from(el.parentNode.children).indexOf(el) % 2) * 100 + 'ms';
-      }
-      observer.observe(el);
-    });
-  }
   // Click-to-enlarge: tapping any carousel or single image opens it full screen.
   // Arrow keys, swipes, or the arrows step through the same carousel. Esc or a click outside closes it.
   const zoomables = Array.from(document.querySelectorAll('.carousel-slide img, .single-image img'));
@@ -80,12 +63,10 @@ document.addEventListener('DOMContentLoaded', () => {
       '<button class="lightbox-btn lightbox-close" aria-label="Close">&times;</button>' +
       '<button class="lightbox-btn lightbox-prev" aria-label="Previous image">&#8249;</button>' +
       '<img class="lightbox-img" alt="">' +
-      '<p class="lightbox-caption"></p>' +
       '<button class="lightbox-btn lightbox-next" aria-label="Next image">&#8250;</button>';
     document.body.appendChild(box);
 
     const bigImg = box.querySelector('.lightbox-img');
-    const caption = box.querySelector('.lightbox-caption');
     const prevBtn = box.querySelector('.lightbox-prev');
     const nextBtn = box.querySelector('.lightbox-next');
     let group = [];
@@ -94,8 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const show = (i) => {
       index = (i + group.length) % group.length;
       bigImg.src = group[index].currentSrc || group[index].src;
-      bigImg.alt = group[index].alt;
-      caption.textContent = group[index].alt;
+      bigImg.alt = group[index].alt; // read by screen readers, not shown on screen
     };
 
     const openBox = (img) => {
@@ -126,7 +106,13 @@ document.addEventListener('DOMContentLoaded', () => {
     prevBtn.addEventListener('click', () => show(index - 1));
     nextBtn.addEventListener('click', () => show(index + 1));
     box.addEventListener('click', (e) => { if (e.target === box) box.close(); });
-    box.addEventListener('close', () => document.documentElement.classList.remove('lightbox-open'));
+    box.addEventListener('close', () => {
+      document.documentElement.classList.remove('lightbox-open');
+      // Move the carousel behind the popup to the photo you were just looking at
+      const slide = group[index] && group[index].closest('.carousel-slide');
+      const track = slide && slide.closest('.carousel-track');
+      if (track) track.scrollTo({ left: slide.offsetLeft - track.offsetLeft, behavior: 'auto' });
+    });
     box.addEventListener('keydown', (e) => {
       if (group.length > 1 && e.key === 'ArrowLeft') show(index - 1);
       if (group.length > 1 && e.key === 'ArrowRight') show(index + 1);
