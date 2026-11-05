@@ -1019,3 +1019,33 @@ html.lightbox-open {
     background: var(--color-bg);
   }
 }
+/* ===== Creative Background: show all pieces in a grid instead of a carousel ===== */
+
+.carousel-grid .carousel-track {
+  display: block;
+  columns: 3;
+  column-gap: 1rem;
+  overflow: visible;
+  scroll-snap-type: none;
+  padding-bottom: 0;
+}
+
+.carousel-grid .carousel-slide {
+  width: auto;
+  margin-bottom: 1rem;
+  break-inside: avoid;
+}
+
+.carousel-grid .carousel-slide img {
+  height: auto;
+}
+
+.carousel-grid .carousel-btn {
+  display: none;
+}
+
+@media (max-width: 800px) {
+  .carousel-grid .carousel-track {
+    columns: 2;
+  }
+}
